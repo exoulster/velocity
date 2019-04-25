@@ -2,27 +2,40 @@
 % Please edit documentation in R/velocity.R
 \name{velocity}
 \alias{velocity}
+\alias{add_velocity}
 \title{Velocity}
 \usage{
-velocity(data, ..., ts, window_length = NULL, x = NULL, func = NULL,
-  filter = NULL, offset = NULL, na.rm = TRUE)
+velocity(data, ..., x = NULL, ts, time_window = Inf, func = NULL,
+  filter = NULL, na.rm = TRUE)
+
+add_velocity(data, ..., x = NULL, ts, time_window = Inf, func = NULL,
+  filter = NULL, na.rm = TRUE, name = NULL)
 }
 \arguments{
-\item{ts}{datetime vector of transaction timestamp.}
+\item{data}{data.frame or tibble}
 
-\item{window_length}{length of time window.}
+\item{...}{Variables to group by.}
 
-\item{x}{If NULL, count number of records of data, else count distinct values of x}
+\item{x}{Target column for calculation. If NULL, count number of records of data, else count distinct values of x}
 
-\item{func}{If both x and func are not NULL, apply aggregation funcs to x. Possible values include sum, mean, median, sd.}
+\item{ts}{Datetime column of transaction timestamp.}
 
-\item{filter}{Filter}
+\item{time_window}{Length of time window, could be vector.}
 
-\item{offset}{\code{period} by which to offset from current timestamp.}
+\item{func}{If both x and func exist, apply aggregation funcs to x. Possible values include sum, mean, median, sd.}
+
+\item{filter}{Filter records before calculation.}
+
+\item{name}{naming the resulting velocity variables. Time window specs will also be added the final variable names.}
 }
 \value{
-vector of velocity value
+\code{velocity} returns vector of velocity value
+\code{velocity} returns a tibble containing both original data and new velocity columns
 }
 \description{
 Velocity function for mutate/transmute
+}
+\details{
+\code{velocity} calculates number of records or other aggregated values for a time window, tracing back from each records.
+\code{add_velocity} does the same as velocity and gives back a tibble containing both original data and the respective velocity columns.
 }

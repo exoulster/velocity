@@ -1,12 +1,12 @@
 
+
 #' Window Calculation
 #' @description Summarise the time window and return vector of values
 #' @details It has \code{data} as input, does a series of calculation, including velocity and aggregation, and return a set of metrics
-#' @param data
-#' @param ... Variables to group by.
-#' @param x If NULL, count number of records of data, else count distinct values of x
-#' @param func If both x and func are not NULL, apply aggregation funcs to x. Possible values include sum, mean, median, sd.
-#' @return Vector of metrics.
+#' @param data data.frame or tibble
+#' @param x if NULL, count number of records of data, else count distinct values of x
+#' @param func if both x and func are not NULL, apply aggregation funcs to x. Possible values include sum, mean, median, sd.
+#' @return vector of metrics.
 #' @import dplyr rlang
 window_calculation = function(data, x=NULL, func=NULL, na.rm=TRUE) {
   # enquo
@@ -44,27 +44,27 @@ window_calculation = function(data, x=NULL, func=NULL, na.rm=TRUE) {
 #' Time Window
 #' @description Subset data by a time window of specific length
 #' @param ts datetime of type POSIXct
-#' @param window_length length of time window, specified as lubridate::period. Text input is allowed (1day, 5mins, etc)
+#' @param time_window length of time window, specified as lubridate::period. Text input is allowed (1day, 5mins, etc)
 #' @param offset offset from the ts of last row, specified as lubridate::period.
 #' @return A subset of data
 #' @import dplyr rlang
-time_window = function(data, ts, window_length=NULL, offset=NULL) {
+time_window = function(data, ts, time_window=NULL, offset=NULL) {
   # enquo
   ts_enq = enquo(ts)
 
   # Check if ts is datetime
-  if (!data %>% select(!!ts_enq) %>% pull() %>% inherits('POSIXct')) {
+  if (!inherits(data[[quo_text(ts_enq)]], 'POSIXct')) {
     stop('ts is not POSIXct')
   }
 
   # sort
   data = data %>% arrange(!!ts_enq)
 
-  # prepare for window_length and offset
-  if (!is.null(window_length) & !inherits(window_length, 'Period')) {
-    window_length = lubridate::period(window_length)
+  # prepare for time_window and offset
+  if (!is.null(time_window) & !inherits(time_window, 'Period')) {
+    time_window = lubridate::period(time_window)
   } else {
-    window_length = Inf
+    time_window = Inf
   }
   if (!is.null(offset) & !inherits(offset, 'Period')) {
     offset = lubridate::period(offset)
@@ -73,11 +73,15 @@ time_window = function(data, ts, window_length=NULL, offset=NULL) {
   }
 
   # subset time window
-  end_date = data %>% select(!!ts_enq) %>% pull() %>% max() - offset
-  start_date = end_date - window_length
-  data = data %>%
-    filter(!!ts_enq >= start_date,
-           !!ts_enq <= end_date)  # exclude current row to avoid duplicate rows at the same time
+  # end_date = data %>% summarise(max(!!ts_enq)) %>% pull() - offset
+  # end_date = data[[nrow(data), quo_text(ts_enq)]] - offset
+  end_date = max(data[[quo_text(ts_enq)]]) - offset
+  start_date = end_date - time_window
+  # data = data %>%
+  #   filter(!!ts_enq >= start_date,
+  #          !!ts_enq <= end_date)  # exclude current row to avoid duplicate rows at the same time
+  idx = between(data[[quo_text(ts_enq)]], start_date, end_date)
+  data = data[idx,]
 
   return(data)
 }
@@ -86,7 +90,9 @@ time_window = function(data, ts, window_length=NULL, offset=NULL) {
 #' Window Calculation Along
 #' @description Window Calculation for each record of the table
 #' @import dplyr rlang
-window_calculation_along = function(data, ts, window_length=NULL, x=NULL, func=NULL, filter=NULL, offset=NULL, na.rm=TRUE) {
+window_calculation_along = function(data, ts, time_window=NULL, x=NULL,
+        func=NULL, filter=NULL, offset=NULL, na.rm=TRUE,
+        mc.cores = getOption("mc.cores", 2L)) {
   ts_enq = enquo(ts)
   x_enq = enquo(x)
   func_enq = enquo(func)
@@ -110,10 +116,86 @@ window_calculation_along = function(data, ts, window_length=NULL, x=NULL, func=N
   parallel::mclapply(1:nrow(data), function(rn) {
     data %>%
       slice(1:rn) %>% # roll along
-      time_window(ts=!!ts_enq, window_length=window_length, offset=offset) %>%  # time window
+      time_window(ts=!!ts_enq, time_window=time_window, offset=offset) %>%  # time window
       dplyr::filter(!!filter_enq) %>%
       window_calculation(x=!!x_enq, func=!!func_enq, na.rm=na.rm)
   }) %>% unlist()
+}
+
+
+#' Window Calculation Along 2
+#' @description Window Calculation for each record of the table
+#' @import dplyr rlang
+window_calculation_along2 = function(data, ts, time_window=Inf, x=NULL,
+                                    func=NULL, filter=NULL, na.rm=TRUE) {
+  count = function(x, na.rm=TRUE) {
+    if (na.rm) sum(!is.na(x))
+    else length(x)
+  }
+
+  ts_enq = enquo(ts)
+  x_enq = enquo(x)
+  func_enq = enquo(func)
+  filter_enq = enquo(filter)
+
+  # x is NULL
+  if (quo_is_null(x_enq)) {
+    x_enq = quo(x)
+    data = data %>%
+      mutate(!!x_enq := row_number())
+    func_enq = quo(count)  # only do count when x is null
+  } else {
+    if (quo_is_null(func_enq)) {
+      func_enq = quo(n_distinct)
+    }
+  }
+
+  # prepare for time_window and offset
+  if (!is.infinite(time_window) & !inherits(time_window, 'Period')) {
+    time_window = lubridate::period(time_window) %>% as.numeric()
+  } else {
+    time_window = Inf
+  }
+  # if (!is.null(offset) & !inherits(offset, 'Period')) {
+  #   offset = lubridate::period(offset)
+  # } else {
+  #   offset = 0
+  # }
+
+  # prepare filter_enq
+  if (quo_is_null(filter_enq)) {
+    filter_enq = quo(!!x_enq==!!x_enq)
+  }
+
+  # remove grouping if grouped
+  if (inherits(data, 'grouped_df')) {
+    data = data %>%
+      ungroup()
+  }
+
+  # sort
+  data = data %>% arrange(!!ts_enq)
+
+  # window calculation along
+  ## Filter -> Mangle
+  data = data %>% mutate(!!x_enq := ifelse(!!filter_enq, !!x_enq, NA))
+  if (all(is.na(data[[quo_text(x_enq)]]))) {
+    return(rep(0, nrow(data))) # return 0 if all NA
+  }
+
+  ## Window subset
+  if (is.infinite(time_window)) {
+    lst = runner::window_run(x=data[[quo_text(x_enq)]], k=0)
+  } else {
+    lst = runner::window_run(x=data[[quo_text(x_enq)]], k=time_window, idx=data[[quo_text(ts_enq)]])
+  }
+
+  ## Do calculation
+  res = lapply(lst, function(x) {
+    eval_tidy(func_enq)(x, na.rm=na.rm)
+  }) %>% unlist()
+
+  return(res)
 }
 
 # test = function(data, filter=NULL) {
@@ -130,17 +212,21 @@ window_calculation_along = function(data, ts, window_length=NULL, x=NULL, func=N
 #' Velocity
 #' @description Velocity function for mutate/transmute
 #' @details
-#' @param data
-#' @param ts datetime vector of transaction timestamp.
-#' @param window_length length of time window.
-#' @param x If NULL, count number of records of data, else count distinct values of x
-#' @param func If both x and func are not NULL, apply aggregation funcs to x. Possible values include sum, mean, median, sd.
-#' @param filter Filter
-#' @param offset \code{period} by which to offset from current timestamp.
-#' @return vector of velocity value
+#' \code{velocity} calculates number of records or other aggregated values for a time window, tracing back from each records.
+#' \code{add_velocity} does the same as velocity and gives back a tibble containing both original data and the respective velocity columns.
+#' @param data data.frame or tibble
+#' @param ... Variables to group by.
+#' @param x Target column for calculation. If NULL, count number of records of data, else count distinct values of x
+#' @param ts Datetime column of transaction timestamp.
+#' @param time_window Length of time window, could be vector.
+#' @param func If both x and func exist, apply aggregation funcs to x. Possible values include sum, mean, median, sd.
+#' @param filter Filter records before calculation.
+#' @return
+#' \code{velocity} returns vector of velocity value
+#' \code{velocity} returns a tibble containing both original data and new velocity columns
 #' @import dplyr rlang
 #' @export
-velocity = function(data, ..., ts, window_length=NULL, x=NULL, func=NULL, filter=NULL, offset=NULL, na.rm=TRUE) {
+velocity = function(data, ..., x=NULL, ts, time_window=Inf, func=NULL, filter=NULL, na.rm=TRUE) {
   # enquo
   group_by_enqs = quos(...)
   ts_enq = enquo(ts)
@@ -170,22 +256,23 @@ velocity = function(data, ..., ts, window_length=NULL, x=NULL, func=NULL, filter
 
   # do calculation, nested loop
   parallel::mclapply(data, function(group) {
-    window_calculation_along(group, ts=!!ts_enq, window_length=window_length, x=!!x_enq,
-                            func=!!func_enq, filter=!!filter_enq, offset=offset, na.rm=na.rm)
+    window_calculation_along2(group, ts=!!ts_enq, time_window=time_window[1],
+          x=!!x_enq, func=!!func_enq, filter=!!filter_enq, na.rm=na.rm)
   }) %>% unlist()
 }
 
 
 #' Add velocity
+#' @rdname velocity
+#' @param name naming the resulting velocity variables. Time window specs will also be added the final variable names.
 #' @import dplyr rlang
 #' @export
-add_velocity = function(data, ..., ts, window_length=NULL, x=NULL, func=NULL, filter=NULL, offset=NULL, na.rm=TRUE, name=NULL) {
+add_velocity = function(data, ..., x=NULL, ts, time_window=Inf, func=NULL, filter=NULL, na.rm=TRUE, name=NULL) {
   group_by_enqs = quo(...)
   ts_enq = enquo(ts)
   x_enq = enquo(x)
   func_enq = enquo(func)
   filter_enq = enquo(filter)
-  name_enq = enquo(name)
 
   # prepare filter_enq
   if (quo_is_null(filter_enq)) {
@@ -193,14 +280,22 @@ add_velocity = function(data, ..., ts, window_length=NULL, x=NULL, func=NULL, fi
   }
 
   # prepare name_enq
-  if (quo_is_null(name_enq)) {
-    field_name = sym('vel')
+  if (is.null(name)) {
+    field_name = paste('VEL', toupper(time_window), sep='_')
   } else {
-    field_name = name_enq
+    field_name = paste(name, toupper(time_window), sep='_')
   }
-  data %>% mutate(
-    !!field_name := velocity(data=data, !!group_by_enqs, ts=!!ts_enq,
-                             window_length=window_length, x=!!x_enq,
-                             func=!!func_enq, filter=!!filter_enq, offset=offset, na.rm=na.rm)
-  )
+
+  # loop through time_window vector
+  for (i in seq_along(time_window)) {
+    fn_enq = sym(field_name[i])
+    data = data %>%
+      mutate(
+        !!fn_enq := velocity(data=data, !!group_by_enqs, ts=!!ts_enq,
+                                 time_window=time_window[i], x=!!x_enq,
+                                 func=!!func_enq, filter=!!filter_enq, na.rm=na.rm)
+    )
+  }
+
+  return(data)
 }

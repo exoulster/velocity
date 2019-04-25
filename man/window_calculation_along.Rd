@@ -4,8 +4,9 @@
 \alias{window_calculation_along}
 \title{Window Calculation Along}
 \usage{
-window_calculation_along(data, ts, window_length = NULL, x = NULL,
-  func = NULL, filter = NULL, offset = NULL, na.rm = TRUE)
+window_calculation_along(data, ts, time_window = NULL, x = NULL,
+  func = NULL, filter = NULL, offset = NULL, na.rm = TRUE,
+  mc.cores = getOption("mc.cores", 2L))
 }
 \description{
 Window Calculation for each record of the table

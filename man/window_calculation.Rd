@@ -7,14 +7,14 @@
 window_calculation(data, x = NULL, func = NULL, na.rm = TRUE)
 }
 \arguments{
-\item{x}{If NULL, count number of records of data, else count distinct values of x}
+\item{data}{data.frame or tibble}
 
-\item{func}{If both x and func are not NULL, apply aggregation funcs to x. Possible values include sum, mean, median, sd.}
+\item{x}{if NULL, count number of records of data, else count distinct values of x}
 
-\item{...}{Variables to group by.}
+\item{func}{if both x and func are not NULL, apply aggregation funcs to x. Possible values include sum, mean, median, sd.}
 }
 \value{
-Vector of metrics.
+vector of metrics.
 }
 \description{
 Summarise the time window and return vector of values

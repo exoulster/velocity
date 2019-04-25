@@ -4,12 +4,12 @@
 \alias{time_window}
 \title{Time Window}
 \usage{
-time_window(data, ts, window_length = NULL, offset = NULL)
+time_window(data, ts, time_window = NULL, offset = NULL)
 }
 \arguments{
 \item{ts}{datetime of type POSIXct}
 
-\item{window_length}{length of time window, specified as lubridate::period. Text input is allowed (1day, 5mins, etc)}
+\item{time_window}{length of time window, specified as lubridate::period. Text input is allowed (1day, 5mins, etc)}
 
 \item{offset}{offset from the ts of last row, specified as lubridate::period.}
 }
