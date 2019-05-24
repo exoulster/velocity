@@ -1,8 +1,8 @@
 Package: velocity
-Title: velocity calculation
-Version: 0.2
+Title: Velocity Calculation
+Version: 0.2.1
 Authors@R: person("Jonas", "Gu", email = "exoulster@gmail.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Description: Velocity calculation.
 Depends: 
     R (>= 3.5.2)
 License: GPL-2

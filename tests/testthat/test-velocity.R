@@ -5,7 +5,8 @@ dfr = dplyr::tibble(
   order_id = c('a', 'a', 'b', 'c', 'd', 'd'),
   ip_address = c(1,NA,2,NA,1,5),
   ts = readr::parse_datetime(c('2019-01-01 00:00:00', '2019-01-01 00:05:00', '2019-01-01 00:08:00',
-         '2019-01-01 00:10:00', '2019-01-01 00:11:00', '2019-01-01 00:15:00'))
+         '2019-01-01 00:10:00', '2019-01-01 00:11:00', '2019-01-01 00:15:00')),
+  price = c(10,10,20,20,15,15)
 )
 
 test_that('window_calculation', {
@@ -13,6 +14,7 @@ test_that('window_calculation', {
   expect_equal(window_calculation(dfr), 6)
   expect_equal(window_calculation(dfr %>% group_by(order_id)), 6) # should have same result even if grouped
   expect_equal(window_calculation(dfr, x=request_id, func=mean), 3.5)
+  expect_equal(window_calculation(dfr, x=price, func=sum), 90)
   expect_equal(window_calculation(dfr, order_id), 4)
   expect_equal(window_calculation(dfr, ip_address), 3)
   expect_equal(window_calculation(head(dfr, 4), ip_address), 0) # return 0 if value of last row is NA
@@ -38,14 +40,19 @@ test_that('window_calculation_along2', {
   expect_equal(window_calculation_along2(dfr, ts=ts, time_window='5mins1s', x=order_id), c(1,1,2,3,3,2))
   expect_equal(window_calculation_along2(dfr, ts=ts, filter=!is.na(ip_address)), c(1,1,2,2,3,4))
   expect_equal(window_calculation_along2(dfr, ts=ts, filter=ip_address=='a'), c(0,0,0,0,0,0))
+  expect_equal(window_calculation_along2(dfr, x=price, ts=ts, func=sum), c(10,20,40,60,75,90))
+  expect_equal(window_calculation_along2(dfr, x=price, ts=ts, func=sum, filter=price>=20), c(0,0,20,40,40,40))
 })
 
 test_that('velocity', {
   expect_equal(velocity(dfr, order_id, ts=ts), c(1,2,1,1,1,2))
+  expect_equal(velocity(dfr, request_id, order_id, ts=ts), c(1,1,1,1,1,1))  # test group_by 2 variables
+
 })
 
 test_that('add_velocity', {
   expect_equal(add_velocity(dfr, order_id, ts=ts) %>% pull(), c(1,2,1,1,1,2))
   expect_equal(add_velocity(dfr, order_id, ts=ts, time_window=c('5mins', '10mins')) %>% pull(-2), c(1,1,1,1,1,2))
+  expect_equal(add_velocity(dfr, request_id, order_id, ts=ts) %>% pull(), c(1,1,1,1,1,1))
 })
 

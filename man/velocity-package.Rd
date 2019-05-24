@@ -4,9 +4,9 @@
 \name{velocity-package}
 \alias{velocity}
 \alias{velocity-package}
-\title{velocity: velocity calculation}
+\title{velocity: Velocity Calculation}
 \description{
-What the package does (one paragraph).
+Velocity calculation.
 }
 \author{
 \strong{Maintainer}: Jonas Gu \email{exoulster@gmail.com}

@@ -4,7 +4,8 @@
 \alias{window_calculation}
 \title{Window Calculation}
 \usage{
-window_calculation(data, x = NULL, func = NULL, na.rm = TRUE)
+window_calculation(data, x = NULL, func = NULL, filter = NULL,
+  na.rm = TRUE)
 }
 \arguments{
 \item{data}{data.frame or tibble}
