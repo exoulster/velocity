@@ -46,6 +46,8 @@ test_that('window_calculation_along2', {
 
 test_that('velocity', {
   expect_equal(velocity(dfr, order_id, ts=ts), c(1,2,1,1,1,2))
+  expect_equal(velocity(dfr, x=price, ts=ts, func=sum), c(10,20,40,60,75,90))
+  expect_equal(velocity(dfr, x=price, ts=ts, func=sum, filter=price>=20), c(0,0,20,40,40,40))
   expect_equal(velocity(dfr, request_id, order_id, ts=ts), c(1,1,1,1,1,1))  # test group_by 2 variables
 
 })

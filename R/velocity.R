@@ -169,10 +169,7 @@ window_calculation_along2 = function(data, ts, time_window=Inf, x=NULL,
 
   # window calculation along
   ## Filter -> Mangle
-  # idx = with(data, !!filter_enq)
-  # data[!idx, ][[quo_text(x_enq)]] = NA  # invalidate value if filtered out
-  # data = data %>% mutate(!!x_enq := replace(!!x_enq, !(!!filter_enq), NA))
-  if (quo_is_null(filter_enq)) filter_enq = quo(rep(TRUE, nrow(dfr)))
+  if (quo_is_null(filter_enq)) filter_enq = quo(rep(TRUE, nrow(data)))
   data = data %>% mutate(!!x_enq := ifelse(!!filter_enq, !!x_enq, NA))
 
   ## return 0 if all NA
@@ -222,11 +219,6 @@ velocity = function(data, ..., x=NULL, ts, time_window=Inf, func=NULL, filter=NU
   func_enq = enquo(func)
   filter_enq = enquo(filter)
 
-  # prepare filter_enq
-  if (quo_is_null(filter_enq)) {
-    filter_enq = quo(1==1)
-  }
-
   # remove grouping if grouped
   if (inherits(data, 'grouped_df')) {
     data = data %>%
@@ -262,11 +254,6 @@ add_velocity = function(data, ..., x=NULL, ts, time_window=Inf, func=NULL, filte
   x_enq = enquo(x)
   func_enq = enquo(func)
   filter_enq = enquo(filter)
-
-  # prepare filter_enq
-  if (quo_is_null(filter_enq)) {
-    filter_enq = quo(TRUE)
-  }
 
   # prepare name_enq
   if (is.null(name)) {
