@@ -9,52 +9,54 @@ dfr = dplyr::tibble(
   price = c(10,10,20,20,15,15)
 )
 
-test_that('window_calculation', {
-  expect_equal(window_calculation(tibble()), 0)
-  expect_equal(window_calculation(dfr), 6)
-  expect_equal(window_calculation(dfr %>% group_by(order_id)), 6) # should have same result even if grouped
-  expect_equal(window_calculation(dfr, x=request_id, func=mean), 3.5)
-  expect_equal(window_calculation(dfr, x=price, func=sum), 90)
-  expect_equal(window_calculation(dfr, order_id), 4)
-  expect_equal(window_calculation(dfr, ip_address), 3)
-  expect_equal(window_calculation(head(dfr, 4), ip_address), 0) # return 0 if value of last row is NA
-  expect_equal(window_calculation(dfr, ip_address, na.rm=FALSE), 4)
+test_that('window_calc', {
+  expect_error(window_calc(integer()))
+  expect_equal(window_calc(dfr$request_id), 6)
+  expect_equal(window_calc(dfr$request_id, k=3), 3)
+  expect_equal(window_calc(dfr$request_id, k=3, ts=dfr$ts), 1)
+  expect_equal(window_calc(dfr$request_id, k='5 minutes', ts=dfr$ts), 2) # idx 5 and 6
+  expect_equal(window_calc(dfr$request_id, func=mean), 3.5)
+  expect_equal(window_calc(dfr$order_id, func=n_distinct), 4)
+  expect_equal(window_calc(dfr$request_id, filter=dfr$price>=20), 2)
+  expect_equal(window_calc(dfr$ip_address, na.rm=FALSE), 6)
 })
 
-test_that('time_window', {
-  expect_equal(time_window(dfr, ts) %>% pull(request_id), c(1,2,3,4,5,6))
-  expect_equal(time_window(dfr, ts, '5mins') %>% pull(request_id), c(4,5,6))
-  expect_equal(time_window(dfr, ts, offset='5mins') %>% pull(request_id), c(1,2,3,4))
+test_that('roll_calc', {
+  expect_error(roll_calc(integer()))
+  expect_equal(roll_calc(dfr$request_id), c(1,2,3,4,5,6))
+  expect_equal(roll_calc(dfr$request_id, k=3), c(1,2,3,3,3,3))
+  expect_equal(roll_calc(dfr$request_id, k=3, ts=dfr$ts), c(1,1,1,1,1,1))
+  expect_equal(roll_calc(dfr$request_id, k='5 minutes', ts=dfr$ts), c(1,1,2,2,3,2))
+  expect_equal(roll_calc(dfr$request_id, func=mean), c(1,1.5,2,2.5,3,3.5))
+  expect_equal(roll_calc(dfr$order_id, func=n_distinct), c(1,1,2,3,4,4))
+  expect_equal(roll_calc(dfr$request_id, filter=dfr$price>=20), c(0,0,1,2,2,2))
+  expect_equal(roll_calc(dfr$ip_address, na.rm=FALSE), c(1,2,3,4,5,6))
 })
 
-test_that('window_calculation_along', {
-  expect_equal(window_calculation_along(dfr, ts=ts), c(1,2,3,4,5,6))
-  expect_equal(window_calculation_along(dfr, ts=ts, time_window='5mins'), c(1,2,2,3,3,3))
-  expect_equal(window_calculation_along(dfr, ts=ts, time_window='5mins', x=order_id), c(1,1,2,3,3,2))
-  expect_equal(window_calculation_along(dfr, ts=ts, filter=!is.na(ip_address)), c(1,1,2,2,3,4))
-})
-
-test_that('window_calculation_along2', {
-  expect_equal(window_calculation_along2(dfr, ts=ts), c(1,2,3,4,5,6))
-  expect_equal(window_calculation_along2(dfr, ts=ts, time_window='5mins1s'), c(1,2,2,3,3,3))
-  expect_equal(window_calculation_along2(dfr, ts=ts, time_window='5mins1s', x=order_id), c(1,1,2,3,3,2))
-  expect_equal(window_calculation_along2(dfr, ts=ts, filter=!is.na(ip_address)), c(1,1,2,2,3,4))
-  expect_equal(window_calculation_along2(dfr, ts=ts, filter=ip_address=='a'), c(0,0,0,0,0,0))
-  expect_equal(window_calculation_along2(dfr, x=price, ts=ts, func=sum), c(10,20,40,60,75,90))
-  expect_equal(window_calculation_along2(dfr, x=price, ts=ts, func=sum, filter=price>=20), c(0,0,20,40,40,40))
+test_that('roll_calc_by', {
+  expect_error(roll_calc_by(integer()))
+  expect_equal(roll_calc_by(dfr$request_id, dfr$order_id), c(1,2,1,1,1,2))
+  expect_equal(roll_calc_by(dfr$request_id, dfr$order_id, k=3), c(1,2,1,1,1,2))
+  expect_equal(roll_calc_by(dfr$request_id, dfr$order_id, k=3, ts=dfr$ts), c(1,1,1,1,1,1))
+  expect_equal(roll_calc_by(dfr$request_id, dfr$order_id, k='5 minutes', ts=dfr$ts), c(1,1,1,1,1,2))
+  expect_equal(roll_calc_by(dfr$request_id, dfr$order_id, func=mean), c(1,1.5,3,4,5,5.5))
+  expect_equal(roll_calc_by(dfr$price, dfr$order_id, func=n_distinct), c(1,1,1,1,1,1))
+  expect_equal(roll_calc_by(dfr$request_id, dfr$order_id, filter=dfr$price>=20), c(0,0,1,1,0,0))
+  expect_equal(roll_calc_by(dfr$ip_address, dfr$order_id, na.rm=FALSE), c(1,2,1,1,1,2))
 })
 
 test_that('velocity', {
-  expect_equal(velocity(dfr, order_id, ts=ts), c(1,2,1,1,1,2))
-  expect_equal(velocity(dfr, x=price, ts=ts, func=sum), c(10,20,40,60,75,90))
-  expect_equal(velocity(dfr, x=price, ts=ts, func=sum, filter=price>=20), c(0,0,20,40,40,40))
-  expect_equal(velocity(dfr, request_id, order_id, ts=ts), c(1,1,1,1,1,1))  # test group_by 2 variables
-
+  expect_equal(velocity(dfr, request_id, order_id), c(1,2,1,1,1,2))
+  expect_equal(velocity(dfr, request_id, order_id, k=3), c(1,2,1,1,1,2))
+  expect_equal(velocity(dfr, request_id, order_id, k=3, ts=dfr$ts), c(1,1,1,1,1,1))
+  expect_equal(velocity(dfr, request_id, order_id, k='5 minutes', ts=dfr$ts), c(1,1,1,1,1,2))
+  expect_equal(velocity(dfr, request_id, order_id, func=mean), c(1,1.5,3,4,5,5.5))
+  expect_equal(velocity(dfr, price, order_id, func=n_distinct), c(1,1,1,1,1,1))
+  expect_equal(velocity(dfr, request_id, order_id, filter=price>=20), c(0,0,1,1,0,0))
+  expect_equal(velocity(dfr, ip_address, order_id, na.rm=FALSE), c(1,2,1,1,1,2))
 })
 
 test_that('add_velocity', {
-  expect_equal(add_velocity(dfr, order_id, ts=ts) %>% pull(), c(1,2,1,1,1,2))
-  expect_equal(add_velocity(dfr, order_id, ts=ts, time_window=c('5mins', '10mins')) %>% pull(-2), c(1,1,1,1,1,2))
-  expect_equal(add_velocity(dfr, request_id, order_id, ts=ts) %>% pull(), c(1,1,1,1,1,1))
+  expect_equal(add_velocity(dfr, request_id, order_id) %>% pull(), c(1,2,1,1,1,2))
 })
 
