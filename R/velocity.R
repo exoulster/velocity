@@ -68,8 +68,6 @@ window_calc = function(x, k=NULL, ts=NULL, func=NULL, filter=NULL, na.rm=TRUE) {
 }
 
 
-<<<<<<< HEAD
-
 #' @rdname window_calc
 roll_calc = function(x, k=NULL, ts=NULL, func=NULL, filter=NULL, na.rm=TRUE) {
   # param validation
@@ -101,18 +99,8 @@ roll_calc = function(x, k=NULL, ts=NULL, func=NULL, filter=NULL, na.rm=TRUE) {
 
   return(res)
 }
-=======
 
-#' @rdname window_calc
-roll_calc = function(x, k=NULL, ts=NULL, func=NULL, filter=NULL, na.rm=TRUE) {
-  # param validation
-  validate(x=x, k=k, ts=ts, func=func, filter=filter)
->>>>>>> 3a092dc926540348c9bb9f8897e802ae1bdaefca
 
-  # convert period to numeric if k is character input
-  k = parse_period(k)
-
-<<<<<<< HEAD
 #' @rdname window_calc
 #' @param group_by
 roll_calc_by = function(x, group_by, k=NULL, ts=NULL, func=NULL, filter=NULL, na.rm=TRUE, parallel=TRUE) {
@@ -122,8 +110,6 @@ roll_calc_by = function(x, group_by, k=NULL, ts=NULL, func=NULL, filter=NULL, na
   # convert period to numeric if k is character input
   k = parse_period(k)
 
-=======
->>>>>>> 3a092dc926540348c9bb9f8897e802ae1bdaefca
   # generate window of x for calculation
   ## filter -> set to NA
   if (!is.null(filter)) {
@@ -133,12 +119,7 @@ roll_calc_by = function(x, group_by, k=NULL, ts=NULL, func=NULL, filter=NULL, na
       message('na.rm is set to TRUE when filter applies')
     }
   }
-  ## window_run
-  if (is.null(k)) k=0L
-  if (is.null(ts)) ts=1L
-  roll_windows = runner::window_run(x=x, k=k, idx=ts)
 
-<<<<<<< HEAD
   if (parallel) mc.cores = getOption("mc.cores", 2L)
   else mc.cores = 1
 
@@ -150,65 +131,17 @@ roll_calc_by = function(x, group_by, k=NULL, ts=NULL, func=NULL, filter=NULL, na
     mclapply(x_groups, function(x) {
       roll_calc(x=x, k=k, ts=ts, func=!!func_enq, na.rm=na.rm)
     }, mc.cores=mc.cores) %>%
-=======
-  # do calculation
-  func_enq = rlang::enquo(func)
-  res = lapply(roll_windows, function(x) {
-    do_calculation(x=x, func=!!func_enq, na.rm=na.rm)
-  }) %>%
-    unlist()
-
-  return(res)
-}
-
-
-#' @rdname window_calc
-#' @param group_by
-roll_calc_by = function(x, group_by, k=NULL, ts=NULL, func=NULL, filter=NULL, na.rm=TRUE, parallel=TRUE) {
-  # param validation
-  validate(x=x, group_by=group_by, k=k, ts=ts, func=func, filter=filter)
-
-  # convert period to numeric if k is character input
-  k = parse_period(k)
-
-  # generate window of x for calculation
-  ## filter -> set to NA
-  if (!is.null(filter)) {
-    x[!filter] = NA
-    if (na.rm==FALSE) {
-      na.rm = TRUE
-      message('na.rm is set to TRUE when filter applies')
-    }
-  }
-
-  # window_run & calculation
-  func_enq = rlang::enquo(func)
-  if (is.null(k)) k=0L
-  if (is.null(ts)) {
-    x_groups = split(x, group_by)
-    lapply(x_groups, function(x) {
-      roll_calc(x=x, k=k, ts=ts, func=!!func_enq, na.rm=na.rm)
-    }) %>%
->>>>>>> 3a092dc926540348c9bb9f8897e802ae1bdaefca
       unlist() %>%
       unname()
   } else {
     x_groups = split(x, group_by)
     ts_groups = split(ts, group_by)
-<<<<<<< HEAD
     parallel::mcmapply(function(x, ts) {
-=======
-    mapply(function(x, ts) {
->>>>>>> 3a092dc926540348c9bb9f8897e802ae1bdaefca
       roll_windows = runner::window_run(x=x, k=k, idx=ts)
       lapply(roll_windows, function(x) {
         do_calculation(x=x, func=!!func_enq, na.rm=na.rm)
       }) %>% unlist()
-<<<<<<< HEAD
     }, x_groups, ts_groups, mc.cores=mc.cores) %>%
-=======
-    }, x_groups, ts_groups) %>%
->>>>>>> 3a092dc926540348c9bb9f8897e802ae1bdaefca
       unlist() %>%
       unname()
   }
