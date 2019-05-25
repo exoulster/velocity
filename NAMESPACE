@@ -2,5 +2,6 @@
 
 export(add_velocity)
 export(velocity)
+export(window_calc)
 import(dplyr)
 import(rlang)
