@@ -39,10 +39,17 @@ add_velocity(data, x, group_by, k = NULL, ts = NULL, func = NULL,
 \item{name}{naming the resulting velocity variables. Time window specs will also be added the final variable names.}
 }
 \value{
+<<<<<<< HEAD
 scalar for \code{window_calc} and vector for \code{roll_calc}, \code{roll_calc_by}, \code{velocity} and \code{add_velocity}
 }
 \description{
 Applying (Rolling) Calculation to specified time window.
+=======
+scalar for window_calc and vector for roll_calc
+}
+\description{
+Summarise the time window and returns a scalar
+>>>>>>> 3a092dc926540348c9bb9f8897e802ae1bdaefca
 }
 \details{
 \code{window_calc}, \code{roll_calc}, \code{roll_calc_by} are vectorized function.
