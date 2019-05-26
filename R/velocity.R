@@ -176,19 +176,21 @@ velocity = function(data, x, group_by=NULL, k=NULL, ts=NULL, func=NULL, filter=N
 #' @param name naming the resulting velocity variables. Time window specs will also be added the final variable names.
 #' @import dplyr rlang
 #' @export
-add_velocity = function(data, x, group_by, k=NULL, ts=NULL, func=NULL, filter=NULL, na.rm=TRUE, parallel=TRUE, name=NULL) {
+add_velocity = function(data, x, group_by=NULL, k=NULL, ts=NULL, func=NULL, filter=NULL, na.rm=TRUE, parallel=TRUE, name=NULL) {
   group_by_enq = enquo(group_by)
   x_enq = enquo(x)
   ts_enq = enquo(ts)
   func_enq = enquo(func)
   filter_enq = enquo(filter)
 
-  name = case_when(
-    is.null(func) & is.null(k) ~ 'ROLLING_COUNT',
-    is.null(func) & !is.null(k) ~ paste('ROLLING', 'COUNT', k %>% as.character() %>% toupper(), sep='_'),
-    !is.null(func) & is.null(k) ~ paste('ROLLING', quo_text(func_enq) %>% toupper(), sep='_'),
-    !is.null(func) & !is.null(k) ~ paste('ROLLING', quo_text(func_enq) %>% toupper(), k %>% as.character() %>% toupper(), sep='_')
-  )
+  if (is.null(name)) {
+    name = case_when(
+      is.null(func) & is.null(k) ~ 'ROLLING_COUNT',
+      is.null(func) & !is.null(k) ~ paste('ROLLING', 'COUNT', k %>% as.character() %>% toupper(), sep='_'),
+      !is.null(func) & is.null(k) ~ paste('ROLLING', quo_text(func_enq) %>% toupper(), sep='_'),
+      !is.null(func) & !is.null(k) ~ paste('ROLLING', quo_text(func_enq) %>% toupper(), k %>% as.character() %>% toupper(), sep='_')
+    )
+  }
 
   if (quo_is_null(group_by_enq)) {
     data %>%
